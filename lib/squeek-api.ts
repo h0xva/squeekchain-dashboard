@@ -46,6 +46,9 @@ type Json = Record<string, unknown>;
 type Result = { data: Json | null; error: string | null };
 const API = "https://api.squeekchain.com/v1";
 const CORE = "0x74665daeca35a2303e767e76a2ff1fb6f93e119f";
+const MINING = "0x3bee588fc20de788bac17d33b41da7346cb27ec4";
+const TOKEN = "0x6872bfa5ccc3e9e440c6c16e5ffdabb8dba4cc76";
+const NFT = "0x0eaf3e0d40a0a8e5a6ac030b2459e9fb0b7905c6";
 const cached = new Map<string, { data: Json; etag: string | null; expires: number }>();
 const cooldowns = new Map<string, { expires: number; error: string }>();
 const object = (value: unknown): Json =>
@@ -73,7 +76,16 @@ function scaled(value: unknown, decimals: number): number | null {
 }
 
 function validDate(value: unknown): string | null {
+  // Chain envelopes sometimes encode Unix seconds as decimal strings; Date.parse
+  // does not interpret these as epoch timestamps.
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return value <= 8_640_000_000_000 ? new Date(value * 1000).toISOString() : null;
+  }
   const date = string(value);
+  if (date && /^\d+$/.test(date)) {
+    const seconds = integer(date);
+    return seconds !== null && seconds <= 8_640_000_000_000 ? new Date(seconds * 1000).toISOString() : null;
+  }
   return date && Number.isFinite(Date.parse(date)) ? date : null;
 }
 
@@ -124,8 +136,21 @@ async function get(path: string, version: number, ttl: number, signal?: AbortSig
       : false;
     if (!validShape) return failure(path, "invalid response shape");
     const identities = object(data.identities);
-    if (typeof identities.core === "string" && identities.core.toLowerCase() !== CORE) {
-      return failure(path, "deployment mismatch");
+    const settlementEconomy = object(object(data.mining).economy);
+    const bindings: [string, unknown, string][] = [
+      ["core", identities.core, CORE],
+      ["core", object(data.chain).coreAddress, CORE],
+      ["mining", object(identities.mining).proxy, MINING],
+      ["mining", settlementEconomy.mining, MINING],
+      ["token", identities.token, TOKEN],
+      ["token", settlementEconomy.token, TOKEN],
+      ["token", object(data.asset).address, TOKEN],
+      ["NFT", identities.genesis, NFT],
+    ];
+    for (const [name, actual, expected] of bindings) {
+      if (typeof actual === "string" && actual.toLowerCase() !== expected) {
+        return failure(path, `deployment mismatch (${name}: expected ${expected}, received ${actual.toLowerCase()})`);
+      }
     }
     cached.set(path, { data, etag: response.headers.get("ETag"), expires: Date.now() + ttl });
     return { data, error: null };
@@ -188,9 +213,7 @@ export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal):
     Date.now() - Date.parse(receivedAt) <= (integer(measurement.staleAfterSeconds) ?? 120) * 1000;
   if (fresh && measurement.coreStatus !== "COUNTER_FAULT") {
     const speed = integer(measurement.speedMmPerSecond);
-    const distance = integer(measurement.distanceMm);
     result.speedKmh = speed === null ? null : speed * 0.0036;
-    result.distanceTodayKm = distance === null ? null : distance / 1_000_000;
     result.running = measurement.coreStatus === "ACTIVE" ? true : measurement.coreStatus === "IDLE" ? false : null;
   } else if (statusResult.data) {
     result.errors.push("/status: measurement unavailable or stale");
@@ -225,6 +248,14 @@ export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal):
   result.issuedToday = mining.status === "available" ? scaled(mining.rangeMintedBaseUnits, 18) : null;
   result.totalSupply = scaled(object(economy.supply).liveSupplyBaseUnits, 18);
   result.totalStaked = scaled(object(economy.staking).totalStakedBaseUnits, 18);
+
+  // Use the accumulated statistics day with the API's explicit noon UTC boundary;
+  // this history remains useful even when the instantaneous telemetry is stale.
+  const currentDay = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const statsDay = list(activity.days).find((day) => day.date === currentDay);
+  const observedToday = integer(object(statsDay?.coverage).observedRoundCount);
+  const dayDistance = observedToday !== null && observedToday > 0 ? integer(statsDay?.distanceMm) : null;
+  result.distanceTodayKm = dayDistance === null ? null : dayDistance / 1_000_000;
 
   const settlementBuckets = list(historyResult.data?.buckets);
   result.series = list(activity.days).flatMap((day) => {
@@ -289,6 +320,22 @@ export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal):
       if (!timestamp || !txHash) return [];
       return [{ id: `${txHash}:${string(settlement.logIndex) ?? "0"}`, block: integer(settlement.blockHeight), work: integer(settlement.workAdded), reward: scaled(settlement.sqkMintedBaseUnits, 18), timestamp, txHash, type: "system.settlement_completed" }];
     });
+  }
+  // The public API may move to a new deployment while this dashboard still
+  // targets the configured contracts. Never combine that deployment's anchor
+  // or telemetry projection with links and totals for the configured graph.
+  if (result.errors.some((error) => error.includes("deployment mismatch"))) {
+    result.blockHeight = null;
+    result.nextBlockHeight = null;
+    result.progress = null;
+    result.remainingSeconds = null;
+    result.difficulty = null;
+    result.settledWork = null;
+    result.issuedToday = null;
+    result.totalSupply = null;
+    result.totalStaked = null;
+    result.events = [];
+    result.series = result.series.map((point) => ({ ...point, blocks: null }));
   }
   const available = results.filter((entry) => entry.data !== null).length;
   result.sourceStatus = available === 0 ? "unavailable" : result.errors.length ? "partial" : "available";

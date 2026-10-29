@@ -20,6 +20,7 @@ type Account = {
 };
 type AccountActivity = { id: string; kind: string; amountBaseUnits?: string; tokenId?: string; source?: { transactionHash?: string; blockTimestamp?: string } };
 const API = "https://api.squeekchain.com/v1";
+const EXPECTED_CORE = "0x74665dAecA35A2303e767E76a2FF1FB6F93e119f".toLowerCase();
 const UNIT = BigInt("1000000000000000000");
 const ZERO = BigInt(0);
 const demoTokens: Token[] = [
@@ -68,6 +69,11 @@ async function readApi<T>(path: string, signal?: AbortSignal): Promise<T> {
     const decoded: unknown = await response.json();
     if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw new Error("The API returned an incomplete response.");
     const body = decoded as Record<string, unknown>;
+    const identities = body.identities;
+    if (identities && typeof identities === "object" && !Array.isArray(identities)) {
+      const core = (identities as Record<string, unknown>).core;
+      if (typeof core === "string" && core.toLowerCase() !== EXPECTED_CORE) throw new Error("API deployment differs from the configured contracts. Portfolio data is withheld.");
+    }
     if (body.schemaVersion !== 2) throw new Error("This API response version is not supported yet.");
     if (body.status === "unavailable") throw new Error(`Account data is unavailable${body.reason ? `: ${String(body.reason).replaceAll("_", " ")}` : ""}.`);
     if (body.status !== "available") throw new Error("The API returned an incomplete response.");

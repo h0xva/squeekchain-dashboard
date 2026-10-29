@@ -3,6 +3,8 @@
  * node --experimental-strip-types scripts/verify-squeek-api.mjs
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const originalFetch = globalThis.fetch;
 const originalNow = Date.now;
@@ -118,7 +120,7 @@ try {
   assert.equal(result.sourceStatus, "available");
   assert.equal(result.blockHeight, 2000);
   assert.equal(result.nextBlockHeight, 2004, "next block follows projected frontier, separately from settled height");
-  assert.equal(result.distanceTodayKm, 10);
+  assert.equal(result.distanceTodayKm, 1, "daily distance comes from current noon-UTC stats day, separately from live measurement");
   assert.equal(result.speedKmh, 3.6);
   assert.equal(result.progress, .73);
   assert.equal(result.issuedToday, 5600.123456);
@@ -156,6 +158,79 @@ try {
     assert.equal(invalid.errors.length, 7);
   }
 
+  // A current API can report another deployment while status still supplies a
+  // projected anchor. A single mismatch must suppress every chain-specific view.
+  const mismatchAdapter = await load("mixed-deployments");
+  globalThis.fetch = async (url) => {
+    const path = pathOf(url);
+    const data = fixture(path);
+    if (path === "/core" || path === "/economy/state") {
+      data.identities = { core: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44" };
+    }
+    return json(data);
+  };
+  const mismatch = await mismatchAdapter.fetchDashboard("7d");
+  assert.equal(mismatch.sourceStatus, "partial");
+  for (const field of ["blockHeight", "nextBlockHeight", "progress", "remainingSeconds", "difficulty", "settledWork", "issuedToday", "totalSupply", "totalStaked"]) {
+    assert.equal(mismatch[field], null, `${field} must not fall back across deployments`);
+  }
+  assert.deepEqual(mismatch.events, []);
+  assert.ok(mismatch.series.every((point) => point.blocks === null));
+  assert.equal(mismatch.running, true, "independent wheel telemetry remains visible");
+  assert.equal(mismatch.distanceTodayKm, 1, "wheel distance history remains visible");
+  assert.ok(mismatch.errors.some((error) => error.includes("expected 0x74665") && error.includes("received 0x980b")));
+
+  // Epoch strings and numbers appear in onchain timestamp fields.
+  const epochAdapter = await load("epoch-timestamps");
+  globalThis.fetch = async (url) => {
+    const path = pathOf(url);
+    const data = fixture(path);
+    const epoch = Math.floor(clock / 1000);
+    if (path === "/status") {
+      data.generatedAt = String(epoch);
+      data.measurement.receivedAt = epoch;
+    }
+    if (path.startsWith("/events")) data.events = [];
+    if (path.includes("/settlements?range=24h")) {
+      data.recentSettlements[0].blockTimestamp = String(epoch);
+      data.recentSettlements[0].blockHeight = "1990";
+      data.recentSettlements[0].workAdded = "100";
+    }
+    return json(data);
+  };
+  const epochResult = await epochAdapter.fetchDashboard("7d");
+  assert.equal(epochResult.running, true);
+  assert.equal(epochResult.updatedAt, iso());
+  assert.equal(epochResult.events[0].timestamp, iso());
+  assert.equal(epochResult.events[0].reward, 12.5);
+
+  // Optional smoke test against an actual captured API bundle; never fetches
+  // network data. Example: append ../../work/live-api to the command.
+  if (process.argv[2]) {
+    const directory = resolve(process.argv[2]);
+    const actual = Object.fromEntries(["status", "core", "stats", "settlements", "economy", "events"].map((key) => [key, JSON.parse(readFileSync(resolve(directory, `${key}.json`), "utf8"))]));
+    const actualAdapter = await load("captured-live-schema");
+    clock = Date.parse(actual.status.generatedAt);
+    globalThis.fetch = async (url) => {
+      const path = pathOf(url);
+      const key = path === "/status" ? "status" : path === "/core" ? "core" : path.startsWith("/measurement") ? "stats" : path.startsWith("/settlements") ? "settlements" : path.startsWith("/economy") ? "economy" : "events";
+      return json(actual[key]);
+    };
+    const captured = await actualAdapter.fetchDashboard("7d");
+    assert.ok(captured.errors.some((error) => error.includes("deployment mismatch")));
+    assert.equal(captured.blockHeight, null);
+    assert.equal(captured.nextBlockHeight, null);
+    assert.equal(captured.progress, null);
+    assert.equal(captured.issuedToday, null);
+    assert.equal(captured.totalSupply, null);
+    assert.deepEqual(captured.events, []);
+    assert.ok(captured.series.length > 0);
+    const currentDay = new Date(clock - 43_200_000).toISOString().slice(0, 10);
+    const latest = actual.stats.activity.days.find((day) => day.date === currentDay);
+    assert.equal(captured.distanceTodayKm, latest?.distanceMm === null || !latest ? null : Number(latest.distanceMm) / 1e6);
+    console.log("Captured API smoke test passed: current deployment mismatch suppresses chain data; independent wheel history remains available.");
+  }
+
   const demo7 = adapter.demoSnapshot("7d");
   const demo30 = adapter.demoSnapshot("30d");
   assert.equal(demo7.series.length, 7);
@@ -163,7 +238,7 @@ try {
   assert.equal(demo30.series.length, 30);
   assert.ok(demo30.events.every((event) => !event.txHash), "synthetic events never impersonate chain transactions");
   assert.ok(demo30.series.every((point) => point.distance !== null && point.distance > 0));
-  console.log("Squeekchain API verification passed: unavailable/null states, failure backoff, Retry-After, schema and deployment validation, units, history gaps, actual issuance, measured ETA, and 7d/30d demos.");
+  console.log("Squeekchain API verification passed: unavailable/null states, backoff, Retry-After, schema and deployment isolation, units, history gaps, actual issuance, measured ETA, epoch timestamps, and demos.");
 } finally {
   globalThis.fetch = originalFetch;
   Date.now = originalNow;
