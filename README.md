@@ -26,6 +26,10 @@ npm run build
 - **Portfolio:** injected EIP-1193 Ethereum wallet connection, account/chain change handling, wallet disconnect within the dashboard, or public address lookup. Collection images, level, base power, custody filters, pagination, staking, account-wide rewards and recent history. No signature or transaction is requested. Claims and staking are managed through the official Squeekchain application.
 - **Navigation:** responsive sidebar, external block explorer/docs, contract-address dialog with copy controls, keyboard focus handling, reduced-motion support, and Demo/Live controls.
 
+## Ecosystem
+
+The Ecosystem navigation entry opens a Coming soon page at `#ecosystem`. No projects are listed yet. Official and community projects will be distinguished when listings open; the page makes no launch-date or partnership claims.
+
 ## Live and demo data
 
 The initial demo is visibly labeled. The application checks the public API and automatically selects Live if all data sources are verified available, until the user explicitly selects a mode. Live mode never inserts demo values. Unknown or unavailable values remain null and display as `—`; missing historical observations remain gaps. The demo contains synthetic fixtures and sample NFT art, with no real transaction links.
