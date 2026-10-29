@@ -28,9 +28,9 @@ npm run build
 
 ## Live and demo data
 
-The initial demo is visibly labeled. The application checks the public API and automatically selects Live if data is available, until the user explicitly selects a mode. Live mode never inserts demo values. Unknown or unavailable values remain null and display as `—`; missing historical observations remain gaps. The demo contains synthetic fixtures and sample NFT art, with no real transaction links.
+The initial demo is visibly labeled. The application checks the public API and automatically selects Live if all data sources are verified available, until the user explicitly selects a mode. Live mode never inserts demo values. Unknown or unavailable values remain null and display as `—`; missing historical observations remain gaps. The demo contains synthetic fixtures and sample NFT art, with no real transaction links.
 
-The public API could not be reached from the build environment on 29 October 2026. Integration follows the official schemas at https://docs.squeekchain.com/developers/api/ and is covered by deterministic adapter tests. A real wallet and live data must be verified when the upstream API is reachable.
+The public API was verified on 29 October 2026. It currently reports a different Sepolia deployment: core 0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44, whereas the supplied configuration uses 0x74665dAecA35A2303e767E76a2FF1FB6F93e119f. The dashboard withholds chain-specific values on this mismatch and shows a visible notice; independent wheel telemetry/history remains available. Configuration is never silently replaced. Integration follows https://docs.squeekchain.com/developers/api/ and was checked against actual API responses plus deterministic tests. A real wallet connection has not been end-to-end verified.
 
 The public API is requested directly from the browser with no credentials. No API key or WalletConnect project ID is needed. Wallet connection supports an installed injected Ethereum wallet; mobile WalletConnect QR sessions are not included. Public address lookup works without a wallet.
 
