@@ -25,7 +25,7 @@ export const CONTRACTS = {
     role: "Reward token · 18 decimals · 2.1B cap",
   },
   nft: {
-    label: "Genesis / Launch",
+    label: "SqueekNFT",
     address: "0xcb98349c134ab983da5bfd80527dfe2552bdb70f",
     role: "Genesis Squeeks · 9,999 maximum",
   },
