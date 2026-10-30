@@ -16,17 +16,17 @@ export const CONTRACTS = {
   },
   mining: {
     label: "SqueekMining",
-    address: "0x3beE588fC20dE788Bac17d33b41Da7346cb27EC4",
+    address: "0xcd46990f8349057335289ef282c276204b6cdc62",
     role: "Issues SQK to Squeek holders by active power",
   },
   token: {
     label: "SQK",
-    address: "0x6872bfa5ccc3e9e440c6c16e5ffdabb8dba4cc76",
+    address: "0x5501e1fa81be1c3f49225fa7668da0245d07db60",
     role: "Reward token · 18 decimals · 2.1B cap",
   },
   nft: {
-    label: "SqueekNFT",
-    address: "0x0eAF3E0d40A0a8E5a6Ac030b2459E9FB0B7905c6",
+    label: "Genesis / Launch",
+    address: "0xcb98349c134ab983da5bfd80527dfe2552bdb70f",
     role: "Genesis Squeeks · 9,999 maximum",
   },
 } as const;
