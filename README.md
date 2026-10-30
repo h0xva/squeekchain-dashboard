@@ -1,68 +1,81 @@
-# Squeekchain dashboard
+# Squeekchain community dashboard
 
-A complete community dashboard for Squeekchain, with an overview, historical analytics, and an Ethereum wallet portfolio. Built with TypeScript, React 19, the Next.js App Router API through Vinext, Tailwind CSS 4, Recharts, and Lucide. The Vinext/Vite adapter makes the Next application deployable through Sites on Cloudflare Workers.
+**Live from the wheel.** A community dashboard for [Squeekchain](https://squeekchain.com) — the proof-of-work toychain on Ethereum powered by Squeektoshi, a real hamster running in the WHEELY9000.
 
-## Run locally
+Watch progress toward the next Squeek block in real time, explore the network's history, and look up any Squeek holder — no wallet required.
 
-Requires Node.js 22.13+ (Node 24 recommended) and npm.
+![Live view](docs/live.png)
+
+## What's inside
+
+| View | What it shows |
+| --- | --- |
+| **Live** | The WHEELY9000 as an instrument: a progress ring to the next Squeek block whose inner wheel turns at the measured wheel speed and lights its sensor on every magnet pass. Wheel status, speed, distance today, settled height, SQK minted in 24 h, network supply and staking, daily activity and a live settlement feed. When a block is found, the ring closes its lap and a gold pulse fires. |
+| **Analytics** | One date range for every chart (7 / 30 days, noon-to-noon UTC windows): distance, verified work and settled blocks per day with a chart/table toggle, the typical day on the wheel with the current time slot highlighted, network difficulty and all-time records. |
+| **Portfolio** | Paste any address (or connect a wallet, read-only) for claimable SQK, active power split between Squeeks and staked SQK, daily earnings, every Squeek with level, power and custody, and recent activity. Each lookup has a shareable URL: `/portfolio?address=0x…`. |
+| **Ecosystem** | The pinned Sepolia contracts with copy and Etherscan links, a live deployment check, the public API in a few lines, the endpoints this dashboard reads, and official resources. |
+
+| Analytics | Portfolio | Mobile |
+| --- | --- | --- |
+| ![Analytics](docs/analytics.png) | ![Portfolio](docs/portfolio.png) | ![Mobile](docs/mobile.png) |
+
+## Honest numbers
+
+The dashboard never fills a gap with a guess.
+
+- Unknown, stale or unavailable values render as `—`; days without observations stay blank in every chart.
+- **Deployment check.** Contract addresses live in [`lib/contracts.ts`](lib/contracts.ts). If any API response reports a different deployment, every chain-specific value (heights, progress, supply, settlements) is withheld while independent wheel telemetry stays visible. The status pill and banner show which contract differs and what the API reported.
+- Wheel telemetry has explicit states — live, idle, stale, counter fault, unavailable — each with its own copy and visual.
+- The time-to-next-block estimate appears only after two fresh readings show accepted work; it is labelled as an estimate.
+- SQK is shown on a settlement only when its issuance is confirmed on-chain; nothing multiplies blocks by a fixed reward.
+- **Preview mode** (status pill → Preview, or `?preview=1`) runs on clearly labelled sample data that moves on its own, so every state — including a found block — can be explored when the API is quiet. It is never used as a fallback for live data.
+
+> On 29 October 2026 the public API reported SqueekCore `0x980b…3d44`, while this dashboard is pinned to `0x7466…119f`. While that lasts, chain data is withheld in live mode. If Squeekchain confirms a redeployment, update the addresses in `lib/contracts.ts` — it is the only change needed.
+
+## Design system
+
+- **Surfaces:** near-black page (`#05070b`) with three raised steps and hairline borders; cards carry a pointer-following spotlight.
+- **Accents:** electric cyan for work and live state, gold for SQK and rewards. Chart marks use deeper steps (`#00a4cc`, `#c38616`) validated as a pair on the card surface (OKLCH lightness band, CVD ΔE 21.6, normal-vision ΔE 24.9, ≥ 3:1 contrast); hover lifts a mark to the bright brand step.
+- **Type:** Geist Sans with proportional figures for headline numbers, tabular figures for tables and axes; Geist Mono for addresses and labels.
+- **Motion:** springs for progress and numbers, a shared sliding pill for navigation and tabs, staggered entries for new settlements. Everything respects `prefers-reduced-motion`.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Motion · Recharts · Lucide. No backend, no API key: the browser reads the public API at `https://api.squeekchain.com/v1` and an injected EIP-1193 wallet when one is connected.
+
+```
+app/                 routes (Live, Analytics, Portfolio, Ecosystem) and the Open Graph image
+components/live/     hero, wheel ring, network stats, activity, settlement feed
+components/…         analytics, portfolio, ecosystem, shell (header, status, banner) and UI primitives
+lib/squeek-api.ts    network adapter: schema checks, units, caching, back-off, deployment isolation
+lib/account-api.ts   account adapter for portfolios
+lib/contracts.ts     pinned deployment, protocol constants and links
+scripts/verify-squeek-api.mjs   network-free adapter tests
+```
+
+## Run it
+
+Requires Node.js 22.13 or newer.
 
 ```sh
 npm ci
-npm run dev
-```
-
-Open the local address printed by the server (normally http://localhost:5173). For standard Next.js development, `npx next dev` also uses the same App Router sources; Sites production builds use Vinext.
-
-```sh
+npm run dev        # http://localhost:3000
+npm run test:api   # adapter tests: unavailable/stale states, back-off, schema and deployment isolation
 npm run typecheck
-npm run test:api
+npm run lint
 npm run build
 ```
 
-## Views and interactions
-
-- **Overview:** settled block height, measured distance and speed, actual 24-hour issuance, next-block progress, measured ETA, switchable distance/work area chart, settlements and token supply.
-- **Analytics:** 7/30-day windows, distance/work/blocks, typical-day productivity, latest difficulty, and documented activity records. No fabricated historical difficulty curve.
-- **Portfolio:** injected EIP-1193 Ethereum wallet connection, account/chain change handling, wallet disconnect within the dashboard, or public address lookup. Collection images, level, base power, custody filters, pagination, staking, account-wide rewards and recent history. No signature or transaction is requested. Claims and staking are managed through the official Squeekchain application.
-- **Navigation:** responsive sidebar, external block explorer/docs, contract-address dialog with copy controls, keyboard focus handling, reduced-motion support, and Demo/Live controls.
-
-## Ecosystem
-
-The Ecosystem navigation entry opens a Coming soon page at `#ecosystem`. No projects are listed yet. Official and community projects will be distinguished when listings open; the page makes no launch-date or partnership claims.
-
-## Live and demo data
-
-The initial demo is visibly labeled. The application checks the public API and automatically selects Live if all data sources are verified available, until the user explicitly selects a mode. Live mode never inserts demo values. Unknown or unavailable values remain null and display as `—`; missing historical observations remain gaps. The demo contains synthetic fixtures and sample NFT art, with no real transaction links.
-
-The public API was verified on 29 October 2026. It currently reports a different Sepolia deployment: core 0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44, whereas the supplied configuration uses 0x74665dAecA35A2303e767E76a2FF1FB6F93e119f. The dashboard withholds chain-specific values on this mismatch and shows a visible notice; independent wheel telemetry/history remains available. Configuration is never silently replaced. Integration follows https://docs.squeekchain.com/developers/api/ and was checked against actual API responses plus deterministic tests. A real wallet connection has not been end-to-end verified.
-
-The public API is requested directly from the browser with no credentials. No API key or WalletConnect project ID is needed. Wallet connection supports an installed injected Ethereum wallet; mobile WalletConnect QR sessions are not included. Public address lookup works without a wallet.
-
-## Data semantics
-
-- SQK uses 18 decimals. Base-unit values retain BigInt precision before display conversion.
-- Distance is converted from mm to km; measured speed from mm/s to km/h.
-- Activity days run from **12:00 UTC to 12:00 UTC**, as defined by the source API.
-- Block height is the settled frontier; next-block progress follows the projected frontier and is labeled with its own height.
-- ETA appears only after a reliable positive work delta across fresh observations. It is an estimate, not a protocol promise.
-- Network staking and claimable rewards are account-wide; NFT cards do not fabricate individual reward allocations.
-- Settled work and mining issuance are separate on-chain events. The adapter never multiplies completed blocks by a fixed reward to invent issuance.
-- Difficulty is the latest documented work-per-thousand-blocks value, not a historical time series.
-- Sepolia block issuance is 5,600 SQK; the planned mainnet figure is 6,900. Maximum SQK supply is 2.1 billion and maximum NFT count is 9,999.
+Deploys to Vercel with zero configuration.
 
 ## Polling and failure handling
 
-The visible page polls every 15 seconds. The adapter caches status, stats, economy and settlements by endpoint TTL, requests independent sources concurrently, and suspends polling in hidden tabs. Requests time out after 8 seconds. Errors back off for 30 seconds for status and 60 seconds for other sources; HTTP `Retry-After` is respected. Stale measurements, unsupported schema versions, deployment identity mismatch, HTTP errors and `status: unavailable` are treated explicitly. No stale data is presented as a current live measurement.
+The visible tab polls every 15 seconds and pauses when hidden. Each endpoint has its own cache TTL; failures back off (30 s for telemetry, 60 s otherwise) and honour `Retry-After`. Requests time out after 8 seconds. Refetches keep the previous render on screen — no skeleton flash, no layout jump.
 
-## Source layout
+## History
 
-- `app/`: App Router entry, metadata and shared theme.
-- `components/dashboard.tsx`: shell, Overview, navigation, source controls and dialogs.
-- `components/analytics-view.tsx`: historical exploration and records.
-- `components/portfolio-view.tsx`: wallet provider and read-only account explorer.
-- `components/wheel-scene.tsx`: original SVG WHEELY9000 illustration and CSS motion.
-- `lib/squeek-api.ts`: schema validation, unit conversion, cache, backoff and demo fixtures.
-- `scripts/verify-squeek-api.mjs`: API failure and conversion verification.
-- `.openai/hosting.json`: private Sites project identity; contains no secrets.
+The first, Codex-generated version of this dashboard is preserved at the [`v0-codex`](https://github.com/h0xva/squeekchain-dashboard/tree/v0-codex) tag.
 
-All contracts are linked to Sepolia Etherscan. This community dashboard is independent of the official application.
+---
+
+An independent community project, not affiliated with Squeekchain. Sepolia testnet — SQK has no monetary value.

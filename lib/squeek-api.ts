@@ -2,6 +2,8 @@
  * Missing, stale and unavailable values stay null; demo data is opt-in.
  * Documentation: https://docs.squeekchain.com/developers/api/
  */
+import { CONTRACTS } from "./contracts.ts";
+
 export type SeriesPoint = {
   label: string;
   date: string;
@@ -40,15 +42,28 @@ export type DashboardSnapshot = {
   sourceStatus: "available" | "partial" | "unavailable";
   errors: string[];
   updatedAt: string | null;
+  /** Wheel telemetry state: fresh ACTIVE/IDLE readings, stale, faulted or absent. */
+  telemetry: Telemetry;
+  /** When the latest wheel reading was received, even if it is now stale. */
+  measuredAt: string | null;
+  deployment: DeploymentCheck;
+  sources: SourceState[];
 };
+
+export type Telemetry = "live" | "idle" | "stale" | "fault" | "unknown" | "unavailable";
+export type DeploymentCheck = {
+  status: "verified" | "mismatch" | "unknown";
+  mismatches: { name: string; expected: string; received: string }[];
+};
+export type SourceState = { id: string; label: string; ok: boolean; detail: string | null };
 
 type Json = Record<string, unknown>;
 type Result = { data: Json | null; error: string | null };
 const API = "https://api.squeekchain.com/v1";
-const CORE = "0x74665daeca35a2303e767e76a2ff1fb6f93e119f";
-const MINING = "0x3bee588fc20de788bac17d33b41da7346cb27ec4";
-const TOKEN = "0x6872bfa5ccc3e9e440c6c16e5ffdabb8dba4cc76";
-const NFT = "0x0eaf3e0d40a0a8e5a6ac030b2459e9fb0b7905c6";
+const CORE = CONTRACTS.core.address.toLowerCase();
+const MINING = CONTRACTS.mining.address.toLowerCase();
+const TOKEN = CONTRACTS.token.address.toLowerCase();
+const NFT = CONTRACTS.nft.address.toLowerCase();
 const cached = new Map<string, { data: Json; etag: string | null; expires: number }>();
 const cooldowns = new Map<string, { expires: number; error: string }>();
 const object = (value: unknown): Json =>
@@ -180,8 +195,20 @@ function emptySnapshot(): DashboardSnapshot {
     remainingSeconds: null, issuedToday: null, totalSupply: null, totalStaked: null,
     difficulty: null, settledWork: null, running: null, series: [], typicalDay: [],
     records: [], events: [], sourceStatus: "unavailable", errors: [], updatedAt: null,
+    telemetry: "unavailable", measuredAt: null, deployment: { status: "unknown", mismatches: [] }, sources: [],
   };
 }
+
+const SOURCE_LABELS = [
+  ["status", "Wheel telemetry"],
+  ["core", "SqueekCore state"],
+  ["stats", "Activity statistics"],
+  ["settlements-24h", "Settlements · 24h"],
+  ["settlements-range", "Settlement history"],
+  ["economy", "SQK economy"],
+  ["events", "Protocol events"],
+] as const;
+const MISMATCH = /deployment mismatch \((\w+): expected (0x[0-9a-f]{40}), received (0x[0-9a-f]{40})\)/;
 
 /** Fetch independent views together; heavier historical reads have a 60s cache. */
 export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal): Promise<DashboardSnapshot> {
@@ -218,6 +245,11 @@ export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal):
   } else if (statusResult.data) {
     result.errors.push("/status: measurement unavailable or stale");
   }
+  result.measuredAt = receivedAt;
+  result.telemetry = !statusResult.data || receivedAt === null ? "unavailable"
+    : !fresh ? "stale"
+    : measurement.coreStatus === "COUNTER_FAULT" ? "fault"
+    : result.running === true ? "live" : result.running === false ? "idle" : "unknown";
   result.blockHeight = integer(core.blockHeight) ?? integer(anchor.blockHeight);
   result.difficulty = integer(core.workPerThousandBlocks) ?? integer(anchor.workPerThousandBlocks);
   result.settledWork = integer(core.cumulativeWork) ?? integer(anchor.cumulativeWork);
@@ -339,6 +371,24 @@ export async function fetchDashboard(range: "7d" | "30d", signal?: AbortSignal):
   }
   const available = results.filter((entry) => entry.data !== null).length;
   result.sourceStatus = available === 0 ? "unavailable" : result.errors.length ? "partial" : "available";
+  result.sources = results.map((entry, index) => ({
+    id: SOURCE_LABELS[index][0],
+    label: SOURCE_LABELS[index][1],
+    ok: entry.data !== null,
+    detail: entry.error === null ? null : entry.error.replace(/^\/[^ ]*: /, ""),
+  }));
+  const mismatches = new Map<string, DeploymentCheck["mismatches"][number]>();
+  for (const error of result.errors) {
+    const match = MISMATCH.exec(error);
+    if (match) mismatches.set(`${match[1]}:${match[3]}`, { name: match[1], expected: match[2], received: match[3] });
+  }
+  // Any identity that survived get() matched the configured deployment.
+  const verified = results.some(({ data }) => data !== null && [
+    object(data.identities).core, object(data.chain).coreAddress,
+    object(object(data.mining).economy).mining, object(data.asset).address,
+  ].some((value) => typeof value === "string"));
+  result.deployment = mismatches.size ? { status: "mismatch", mismatches: [...mismatches.values()] }
+    : { status: verified ? "verified" : "unknown", mismatches: [] };
   // This labels the telemetry's own observation, not the user's fetch time.
   result.updatedAt = validDate(status.generatedAt) ?? validDate(stats.generatedAt) ?? validDate(today.generatedAt);
   return result;
@@ -363,5 +413,7 @@ export function demoSnapshot(range: "7d" | "30d"): DashboardSnapshot {
     records: [{ label: "Longest day", value: "14.82 km" }, { label: "Top speed", value: "6.24 km/h" }, { label: "Longest run", value: "96 min" }, { label: "Active streak", value: "12 days" }],
     events: Array.from({ length: 6 }, (_, index) => ({ id: `demo-${index}`, block: 2847 - index * 7, work: 77 + index * 11, reward: 5600, timestamp: new Date(now.getTime() - (index * 612 + 38) * 1000).toISOString(), type: "system.settlement_completed" })),
     sourceStatus: "available", errors: [], updatedAt: now.toISOString(),
+    telemetry: "live", measuredAt: now.toISOString(), deployment: { status: "verified", mismatches: [] },
+    sources: SOURCE_LABELS.map(([id, label]) => ({ id, label, ok: true, detail: null })),
   };
 }

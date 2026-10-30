@@ -34,6 +34,11 @@ try {
   assert.deepEqual(unavailable.events, []);
   assert.equal(unavailable.errors.length, 7);
   assert.equal(requests.length, 7);
+  assert.equal(unavailable.telemetry, "unavailable");
+  assert.equal(unavailable.measuredAt, null);
+  assert.equal(unavailable.deployment.status, "unknown");
+  assert.equal(unavailable.sources.length, 7);
+  assert.ok(unavailable.sources.every((source) => !source.ok && source.detail === "indexer_unavailable"));
   clock += 15_000;
   await unavailableAdapter.fetchDashboard("7d");
   assert.equal(requests.length, 7, "15s UI refresh must honor failure cooldowns");
@@ -138,9 +143,28 @@ try {
   assert.equal(result.events[0].reward, null, "settlement must not imply a fixed reward");
   assert.equal(result.events[1].reward, 12.5, "issued SQK is matched by settlement transaction and settled round");
   assert.equal(result.events.length, 2, "settlement table excludes separate checkpoint events");
+  assert.equal(result.telemetry, "live");
+  assert.equal(result.measuredAt, iso());
+  assert.equal(result.deployment.status, "verified", "matching identities verify the pinned deployment");
+  assert.ok(result.sources.every((source) => source.ok && source.detail === null));
   clock += 15_000;
   const next = await adapter.fetchDashboard("7d");
   assert.equal(next.remainingSeconds, 2, "ETA uses observed accepted work delta");
+
+  // A stale reading keeps its timestamp for "last seen" copy but never reports live motion.
+  const staleAdapter = await load("stale-telemetry");
+  const staleAt = new Date(clock - 600_000).toISOString();
+  globalThis.fetch = async (url) => {
+    const path = pathOf(url);
+    const data = fixture(path);
+    if (path === "/status") data.measurement.receivedAt = staleAt;
+    return json(data);
+  };
+  const stale = await staleAdapter.fetchDashboard("7d");
+  assert.equal(stale.telemetry, "stale");
+  assert.equal(stale.measuredAt, staleAt);
+  assert.equal(stale.running, null);
+  assert.equal(stale.speedKmh, null);
 
   // New schema versions and another deployment are rejected rather than guessed.
   for (const mode of ["schema", "deployment"]) {
@@ -179,6 +203,15 @@ try {
   assert.equal(mismatch.running, true, "independent wheel telemetry remains visible");
   assert.equal(mismatch.distanceTodayKm, 1, "wheel distance history remains visible");
   assert.ok(mismatch.errors.some((error) => error.includes("expected 0x74665") && error.includes("received 0x980b")));
+  assert.equal(mismatch.telemetry, "live");
+  assert.equal(mismatch.deployment.status, "mismatch");
+  assert.deepEqual(mismatch.deployment.mismatches, [{
+    name: "core",
+    expected: "0x74665daeca35a2303e767e76a2ff1fb6f93e119f",
+    received: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44",
+  }], "mismatches are reported once per distinct deployment, with both addresses");
+  assert.equal(mismatch.sources.find((source) => source.id === "core").ok, false);
+  assert.equal(mismatch.sources.find((source) => source.id === "status").ok, true);
 
   // Epoch strings and numbers appear in onchain timestamp fields.
   const epochAdapter = await load("epoch-timestamps");
@@ -236,6 +269,8 @@ try {
   assert.equal(demo7.series.length, 7);
   assert.equal(demo7.nextBlockHeight, 2848);
   assert.equal(demo30.series.length, 30);
+  assert.equal(demo7.telemetry, "live");
+  assert.equal(demo7.sources.length, 7);
   assert.ok(demo30.events.every((event) => !event.txHash), "synthetic events never impersonate chain transactions");
   assert.ok(demo30.series.every((point) => point.distance !== null && point.distance > 0));
   console.log("Squeekchain API verification passed: unavailable/null states, backoff, Retry-After, schema and deployment isolation, units, history gaps, actual issuance, measured ETA, epoch timestamps, and demos.");
