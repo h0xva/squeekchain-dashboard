@@ -11,6 +11,7 @@ import { useNow } from "@/lib/use-now";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Meter } from "@/components/ui/meter";
 import { Panel } from "@/components/ui/panel";
+import { ShareOnX } from "@/components/ui/share-button";
 import { StatusDot, type Tone } from "@/components/ui/status-dot";
 import { WheelRing } from "./wheel-ring";
 
@@ -149,6 +150,15 @@ export function LiveHero() {
                 updated {timeAgo(updated, now)}
               </span>
             ) : null}
+            <ShareOnX
+              className="ml-auto"
+              path="/"
+              text={
+                mode !== "preview" && progress !== null && !withheld && data?.nextBlockHeight
+                  ? `Squeek block #${formatNumber(data.nextBlockHeight)} is ${(progress * 100).toFixed(0)}% mined 🐹⚡ Watch Squeektoshi run the WHEELY9000 live:`
+                  : "Watch Squeektoshi mine the next Squeek block live 🐹⚡ Community dashboard for @squeekchain:"
+              }
+            />
           </div>
           <h1 id="hero-title" className="mt-4 text-[32px] font-semibold leading-[1.08] tracking-[-0.035em] text-ink-1 sm:text-[42px]">
             {loading ? "Listening to the wheel…" : headline[telemetry].title}

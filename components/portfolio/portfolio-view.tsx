@@ -33,6 +33,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Panel } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
+import { ShareOnX } from "@/components/ui/share-button";
 import { AddressAvatar } from "./address-avatar";
 import { SqueekCard } from "./squeek-card";
 import { useAccount } from "./use-account";
@@ -172,6 +173,7 @@ export function PortfolioView() {
             sample={sample}
             connected={!!wallet.account && wallet.account === address}
             chainId={wallet.chainId}
+            shareText={shareText(account, squeeks.length)}
             onDisconnect={() => {
               wallet.disconnect();
               router.push(pathname);
@@ -291,6 +293,15 @@ const humanize = (kind: string) =>
     .map((word, index) => (/^(nft|sqk)$/i.test(word) ? word.toUpperCase() : index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word))
     .join(" ");
 
+function shareText(account: { power?: { nftPower: string; sqkPower: string } } | null, count: number) {
+  const power = account?.power && isUnsigned(account.power.nftPower) && isUnsigned(account.power.sqkPower)
+    ? Number(account.power.nftPower) + Number(account.power.sqkPower)
+    : null;
+  return power === null
+    ? "My Squeek portfolio on the @squeekchain community dashboard 🐹"
+    : `${count} Squeek${count === 1 ? "" : "s"} · ${power.toLocaleString("en-US")} active power on @squeekchain 🐹⚡ My portfolio:`;
+}
+
 function countLabel(counts: { wallet: string; staking: string } | undefined, fallback: number) {
   if (counts && isUnsigned(counts.wallet) && isUnsigned(counts.staking)) return (Number(counts.wallet) + Number(counts.staking)).toLocaleString("en-US");
   return fallback.toLocaleString("en-US");
@@ -346,12 +357,14 @@ function AccountBar({
   sample,
   connected,
   chainId,
+  shareText,
   onDisconnect,
 }: {
   address: string | null;
   sample: boolean;
   connected: boolean;
   chainId: string | null;
+  shareText: string;
   onDisconnect: () => void;
 }) {
   return (
@@ -376,6 +389,7 @@ function AccountBar({
       </div>
       {address ? (
         <div className="ml-auto flex items-center gap-1">
+          <ShareOnX path={`/portfolio?address=${address}`} text={shareText} className="mr-1" />
           <CopyButton value={address} label="Copy address" />
           <CopyButton
             value={() => `${window.location.origin}/portfolio?address=${address}`}
