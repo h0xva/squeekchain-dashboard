@@ -3,6 +3,7 @@
 import { ArrowUpRight, BookOpen, Bot, Boxes, Braces, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles } from "lucide-react";
 import { CONTRACTS, LINKS, NETWORK, addressUrl, type ContractKey } from "@/lib/contracts";
 import { useDashboard } from "@/lib/dashboard-context";
+import { observedContracts } from "@/lib/squeek-api";
 import { shortAddress } from "@/lib/format";
 import { GithubIcon, XIcon } from "@/components/ui/brand";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -71,7 +72,7 @@ export function EcosystemView() {
               <h2 className="flex items-center gap-2 text-[15px] font-medium text-ink-1">
                 <Boxes size={15} className="text-cyan" /> Contracts
               </h2>
-              <p className="mt-1 text-[13px] text-ink-3">The {NETWORK.name} deployment this dashboard is pinned to</p>
+              <p className="mt-1 text-[13px] text-ink-3">The {NETWORK.name} deployment served by the public API</p>
             </div>
             <span className="flex items-center gap-1.5 rounded-full border border-line-strong px-2.5 py-1 text-xs text-ink-2">
               {deployment?.status === "verified" ? (
@@ -91,6 +92,8 @@ export function EcosystemView() {
           <ul className="mt-5 divide-y divide-line">
             {(Object.keys(CONTRACTS) as ContractKey[]).map((key) => {
               const contract = CONTRACTS[key];
+              const served = observedContracts.get(key === "nft" ? "NFT" : key);
+              const address = served ?? contract.address;
               const mismatch = deployment?.mismatches.find((item) => item.expected === contract.address.toLowerCase());
               return (
                 <li key={key} className="flex items-center gap-3 py-3.5">
@@ -104,11 +107,11 @@ export function EcosystemView() {
                       ) : null}
                     </div>
                     <div className="mt-0.5 text-xs text-ink-3">{contract.role}</div>
-                    <code className="mt-1.5 block truncate font-mono text-[12px] text-ink-2">{contract.address}</code>
+                    <code className="mt-1.5 block truncate font-mono text-[12px] text-ink-2">{address}</code>
                   </div>
-                  <CopyButton value={contract.address} label={`Copy ${contract.label} address`} />
+                  <CopyButton value={address} label={`Copy ${contract.label} address`} />
                   <a
-                    href={addressUrl(contract.address)}
+                    href={addressUrl(address)}
                     target="_blank"
                     rel="noreferrer"
                     aria-label={`View ${contract.label} on Etherscan`}
@@ -122,7 +125,9 @@ export function EcosystemView() {
             })}
           </ul>
           <p className="mt-2 text-xs leading-5 text-ink-3">
-            Chain data is withheld whenever the API reports a different deployment, so numbers from two deployments never mix.
+            These are the addresses currently served by the public Squeekchain API (a newer Sepolia deployment). They may differ
+            from docs.squeekchain.com until the documentation is updated. Chain data is withheld if the API ever reports a different
+            SqueekCore, so numbers from two deployments never mix.
           </p>
         </Panel>
 

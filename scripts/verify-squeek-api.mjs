@@ -94,7 +94,7 @@ try {
       builder: { status: "available", anchor: { blockHeight: "2000" }, projected: { blockHeight: "2003", blockProgress: "730000000", workPerThousandBlocks: "11000" } },
     };
     if (path === "/core") return {
-      schemaVersion: version, status: "available", identities: { core: "0x74665dAecA35A2303e767E76a2FF1FB6F93e119f" },
+      schemaVersion: version, status: "available", identities: { core: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44" },
       core: { blockHeight: "2000", cumulativeWork: "22000", workPerThousandBlocks: "11000" },
     };
     if (path.startsWith("/measurement")) return {
@@ -189,7 +189,7 @@ try {
     const path = pathOf(url);
     const data = fixture(path);
     if (path === "/core" || path === "/economy/state") {
-      data.identities = { core: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44" };
+      data.identities = { core: "0x74665daeca35a2303e767e76a2ff1fb6f93e119f" };
     }
     return json(data);
   };
@@ -202,13 +202,13 @@ try {
   assert.ok(mismatch.series.every((point) => point.blocks === null));
   assert.equal(mismatch.running, true, "independent wheel telemetry remains visible");
   assert.equal(mismatch.distanceTodayKm, 1, "wheel distance history remains visible");
-  assert.ok(mismatch.errors.some((error) => error.includes("expected 0x74665") && error.includes("received 0x980b")));
+  assert.ok(mismatch.errors.some((error) => error.includes("expected 0x980b") && error.includes("received 0x74665")));
   assert.equal(mismatch.telemetry, "live");
   assert.equal(mismatch.deployment.status, "mismatch");
   assert.deepEqual(mismatch.deployment.mismatches, [{
     name: "core",
-    expected: "0x74665daeca35a2303e767e76a2ff1fb6f93e119f",
-    received: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44",
+    expected: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44",
+    received: "0x74665daeca35a2303e767e76a2ff1fb6f93e119f",
   }], "mismatches are reported once per distinct deployment, with both addresses");
   assert.equal(mismatch.sources.find((source) => source.id === "core").ok, false);
   assert.equal(mismatch.sources.find((source) => source.id === "status").ok, true);

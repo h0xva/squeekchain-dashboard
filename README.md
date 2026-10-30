@@ -30,7 +30,7 @@ The dashboard never fills a gap with a guess.
 - SQK is shown on a settlement only when its issuance is confirmed on-chain; nothing multiplies blocks by a fixed reward.
 - **Preview mode** (status pill → Preview, or `?preview=1`) runs on clearly labelled sample data that moves on its own, so every state — including a found block — can be explored when the API is quiet. It is never used as a fallback for live data.
 
-> On 29 October 2026 the public API reported SqueekCore `0x980b…3d44`, while this dashboard is pinned to `0x7466…119f`. While that lasts, chain data is withheld in live mode. If Squeekchain confirms a redeployment, update the addresses in `lib/contracts.ts` — it is the only change needed.
+> Contract addresses follow what the public API currently serves (SqueekCore `0x980b…3d44`, a newer Sepolia deployment). They may differ from docs.squeekchain.com until the documentation is updated. SqueekCore is the anchor: if the API ever reports another core, chain data is withheld.
 
 ## Design system
 

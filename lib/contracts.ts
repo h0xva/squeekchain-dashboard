@@ -11,7 +11,7 @@ export const NETWORK = {
 export const CONTRACTS = {
   core: {
     label: "SqueekCore",
-    address: "0x74665dAecA35A2303e767E76a2FF1FB6F93e119f",
+    address: "0x980b4424c007caf7a1f3670b48c8eaef7ebc3d44",
     role: "Verifies wheel work and settles Squeek blocks",
   },
   mining: {

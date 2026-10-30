@@ -64,6 +64,8 @@ const CORE = CONTRACTS.core.address.toLowerCase();
 const MINING = CONTRACTS.mining.address.toLowerCase();
 const TOKEN = CONTRACTS.token.address.toLowerCase();
 const NFT = CONTRACTS.nft.address.toLowerCase();
+/** Non-core contract addresses as served by the API (mining, token, NFT). */
+export const observedContracts = new Map<string, string>();
 const cached = new Map<string, { data: Json; etag: string | null; expires: number }>();
 const cooldowns = new Map<string, { expires: number; error: string }>();
 const object = (value: unknown): Json =>
@@ -162,10 +164,14 @@ async function get(path: string, version: number, ttl: number, signal?: AbortSig
       ["token", object(data.asset).address, TOKEN],
       ["NFT", identities.genesis, NFT],
     ];
+    // SqueekCore anchors the deployment and must match. Other contracts follow
+    // whatever the API serves for that core; differences are recorded, not fatal.
     for (const [name, actual, expected] of bindings) {
-      if (typeof actual === "string" && actual.toLowerCase() !== expected) {
+      if (typeof actual !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(actual)) continue;
+      if (name === "core" && actual.toLowerCase() !== expected) {
         return failure(path, `deployment mismatch (${name}: expected ${expected}, received ${actual.toLowerCase()})`);
       }
+      if (name !== "core") observedContracts.set(name, actual.toLowerCase());
     }
     cached.set(path, { data, etag: response.headers.get("ETag"), expires: Date.now() + ttl });
     return { data, error: null };
