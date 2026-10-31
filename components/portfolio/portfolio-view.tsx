@@ -255,6 +255,16 @@ export function PortfolioView() {
                     ? "This address holds no Squeeks in this view yet. Genesis Squeeks are capped at 9,999."
                     : "They’ll appear as soon as the API returns this account."}
                 </p>
+                {account && !squeeks.length ? (
+                  <a
+                    href={LINKS.invite}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.06] px-3.5 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold/[0.1]"
+                  >
+                    Get your first Squeek · invite link <ArrowUpRight size={12} />
+                  </a>
+                ) : null}
               </Panel>
             )}
             {live.cursor && !sample ? (
@@ -299,7 +309,7 @@ function shareText(account: { power?: { nftPower: string; sqkPower: string } } |
     : null;
   return power === null
     ? "My Squeek portfolio on the @squeekchain community dashboard 🐹"
-    : `${count} Squeek${count === 1 ? "" : "s"} · ${power.toLocaleString("en-US")} active power on @squeekchain 🐹⚡ My portfolio:`;
+    : `${count} Squeek${count === 1 ? "" : "s"} · ${power.toLocaleString("en-US")} active power on @squeekchain 🐹⚡`;
 }
 
 function countLabel(counts: { wallet: string; staking: string } | undefined, fallback: number) {
@@ -642,12 +652,12 @@ function GrowCard() {
         A Squeek’s level and the SQK staked with it set its active power. Each Squeek block mints SQK that is split across holders in proportion to it.
       </p>
       <a
-        href={LINKS.genesis}
+        href={LINKS.invite}
         target="_blank"
         rel="noreferrer"
         className="group mt-auto flex items-center justify-between gap-2 border-t border-line pt-4 text-[13px] font-medium text-ink-2 transition-colors hover:text-cyan"
       >
-        Genesis Squeeks <ArrowUpRight size={14} className="transition-transform group-hover:-translate-y-px group-hover:translate-x-px" />
+        Get a Squeek · invite link <ArrowUpRight size={14} className="transition-transform group-hover:-translate-y-px group-hover:translate-x-px" />
       </a>
     </Panel>
   );

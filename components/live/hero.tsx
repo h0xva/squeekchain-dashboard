@@ -155,8 +155,8 @@ export function LiveHero() {
               path="/"
               text={
                 mode !== "preview" && progress !== null && !withheld && data?.nextBlockHeight
-                  ? `Squeek block #${formatNumber(data.nextBlockHeight)} is ${(progress * 100).toFixed(0)}% mined 🐹⚡ Watch Squeektoshi run the WHEELY9000 live:`
-                  : "Watch Squeektoshi mine the next Squeek block live 🐹⚡ Community dashboard for @squeekchain:"
+                  ? `Squeek block #${formatNumber(data.nextBlockHeight)} is ${(progress * 100).toFixed(0)}% mined 🐹⚡ Watch Squeektoshi run the WHEELY9000 live.`
+                  : "Watch Squeektoshi mine the next Squeek block live 🐹⚡ Community dashboard for @squeekchain."
               }
             />
           </div>

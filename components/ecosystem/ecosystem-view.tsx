@@ -168,7 +168,7 @@ export function EcosystemView() {
       </div>
 
       <div className="mt-4 grid gap-4 sm:mt-5 sm:gap-5 md:grid-cols-3">
-        <LinkCard href={LINKS.genesis} eyebrow="Official" title="Genesis" body="Mint and manage Genesis Squeeks." />
+        <LinkCard href={LINKS.invite} eyebrow="Genesis · invite link" title="Get a Squeek" body="Join Genesis through the maintainer’s invite link." />
         <LinkCard href={LINKS.developers} eyebrow="Docs" title="Developers" body="Contracts, events and integration guides." />
         <LinkCard href={LINKS.x} eyebrow="Community" title="@squeekchain" body="Announcements, Aura farming and builder news." icon={<XIcon size={13} />} />
       </div>

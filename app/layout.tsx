@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
-import { Analytics } from "@vercel/analytics/next";
 import { MotionConfig } from "motion/react";
 import { DashboardProvider } from "@/lib/dashboard-context";
 import { WalletProvider } from "@/lib/wallet-context";
@@ -57,7 +56,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </WalletProvider>
           </DashboardProvider>
         </MotionConfig>
-        <Analytics />
       </body>
     </html>
   );

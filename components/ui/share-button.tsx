@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { LINKS } from "@/lib/contracts";
 import { XIcon } from "./brand";
 
 /** Opens a pre-filled post on X. The URL is resolved at click time (browser only). */
@@ -21,7 +22,9 @@ export function ShareOnX({
       type="button"
       onClick={() => {
         const url = `${window.location.origin}${path}`;
-        const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        // X previews the last link, so the dashboard URL goes last and keeps the card.
+        const body = `${text}\n\n🐹 Get a Squeek: ${LINKS.invite}\n📊 ${url}`;
+        const intent = `https://x.com/intent/post?text=${encodeURIComponent(body)}`;
         window.open(intent, "_blank", "noopener,noreferrer");
       }}
       className={clsx(

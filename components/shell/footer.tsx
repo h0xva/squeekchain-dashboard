@@ -17,7 +17,7 @@ export function Footer() {
         </div>
         <nav aria-label="Resources" className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-ink-3">
           {[
-            { href: LINKS.genesis, label: "Genesis" },
+            { href: LINKS.invite, label: "Genesis · invite" },
             { href: LINKS.docs, label: "Docs" },
             { href: LINKS.api, label: "API" },
           ].map((link) => (

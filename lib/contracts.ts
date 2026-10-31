@@ -43,6 +43,8 @@ export const PROTOCOL = {
 export const LINKS = {
   site: "https://squeekchain.com",
   genesis: "https://squeekchain.com/genesis",
+  /** The maintainer's Genesis invite link, labelled as such wherever it appears. */
+  invite: "https://squeekchain.com/genesis/i/4tnz8br4",
   docs: "https://docs.squeekchain.com/",
   api: "https://docs.squeekchain.com/developers/api/",
   apiBase: "https://api.squeekchain.com/v1",
